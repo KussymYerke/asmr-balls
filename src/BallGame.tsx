@@ -8,18 +8,26 @@ const BallGame = () => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
 
-    // High-DPI scaling
-    const scale = window.devicePixelRatio || 1;
-    canvas.width = window.innerWidth * scale;
-    canvas.height = window.innerHeight * scale;
-    canvas.style.width = window.innerWidth + "px";
-    canvas.style.height = window.innerHeight + "px";
-    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    const setupCanvas = () => {
+      const scale = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * scale;
+      canvas.height = window.innerHeight * scale;
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    };
 
-    const center = {
+    setupCanvas();
+    window.addEventListener("resize", setupCanvas);
+
+    const scale = window.devicePixelRatio || 1;
+    const getCanvasCenter = () => ({
       x: canvas.width / (2 * scale),
       y: canvas.height / (2 * scale),
-    };
+    });
+
+    let center = getCanvasCenter();
+
     const commonGapStart = -Math.PI / 2;
     const particleCount = 100;
     const gravity = 0.15;
@@ -73,6 +81,8 @@ const BallGame = () => {
     };
 
     const animate = () => {
+      center = getCanvasCenter();
+
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -162,23 +172,19 @@ const BallGame = () => {
         }
       });
 
-      if (
-        ball.x - ball.radius < 0 ||
-        ball.x + ball.radius > canvas.width / scale
-      ) {
+      const logicalWidth = canvas.width / scale;
+      const logicalHeight = canvas.height / scale;
+
+      if (ball.x - ball.radius < 0 || ball.x + ball.radius > logicalWidth) {
         ball.vx *= -0.9;
       }
-      if (
-        ball.y - ball.radius < 0 ||
-        ball.y + ball.radius > canvas.height / scale
-      ) {
+      if (ball.y - ball.radius < 0 || ball.y + ball.radius > logicalHeight) {
         ball.vy *= -0.8;
         ball.y = Math.max(
           ball.radius,
-          Math.min(canvas.height / scale - ball.radius, ball.y)
+          Math.min(logicalHeight - ball.radius, ball.y)
         );
       }
-
       const maxComponentSpeed = 6;
       ball.vx = Math.max(
         -maxComponentSpeed,
@@ -193,6 +199,11 @@ const BallGame = () => {
     };
 
     animate();
+
+    // Cleanup on unmount
+    return () => {
+      window.removeEventListener("resize", setupCanvas);
+    };
   }, [resetKey]);
 
   return (
